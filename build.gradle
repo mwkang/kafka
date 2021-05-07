@@ -26,7 +26,6 @@ buildscript {
     // For Apache Rat plugin to ignore non-Git files
     classpath "org.ajoberstar:grgit:1.7.0"
     classpath 'com.github.ben-manes:gradle-versions-plugin:0.13.0'
-    classpath 'org.scoverage:gradle-scoverage:2.1.0'
   }
 }
 
@@ -290,31 +289,7 @@ subprojects {
   }
 }
 
-// Aggregates all jacoco results into the root project directory
-task jacocoRootReport(type: org.gradle.testing.jacoco.tasks.JacocoReport) {
-  def javaProjects = subprojects.findAll { it.path != ':core' }
-
-  description = 'Generates an aggregate report from all subprojects'
-  dependsOn(javaProjects.test)
-
-  additionalSourceDirs = files(javaProjects.sourceSets.main.allSource.srcDirs)
-  sourceDirectories = files(javaProjects.sourceSets.main.allSource.srcDirs)
-  classDirectories =  files(javaProjects.sourceSets.main.output)
-  executionData = files(javaProjects.jacocoTestReport.executionData)
-
-  reports {
-    html.enabled = true
-    xml.enabled = true
-  }
-
-  // workaround to ignore projects that don't have any tests at all
-  onlyIf = { true }
-  doFirst {
-    executionData = files(executionData.findAll { it.exists() })
-  }
-}
-
-task reportCoverage(dependsOn: ['jacocoRootReport', 'core:reportScoverage'])
+task reportCoverage(dependsOn: ['core:reportScoverage'])
 
 for ( sv in ['2_10', '2_11', '2_12'] ) {
   String svInDot = sv.replaceAll( "_", ".")
@@ -385,7 +360,6 @@ project(':core') {
   println "Building project 'core' with Scala version ${versions.scala}"
 
   apply plugin: 'scala'
-  apply plugin: "org.scoverage"
   archivesBaseName = "kafka_${versions.baseScala}"
 
   dependencies {
@@ -418,20 +392,7 @@ project(':core') {
     testCompile libs.junit
     testCompile libs.scalaTest
     testCompile libs.jfreechart
-
-    scoverage libs.scoveragePlugin
-    scoverage libs.scoverageRuntime
   }
-
-  jacocoTestReport.enabled = false
-  scoverage {
-    reportDir = file("${rootProject.buildDir}/scoverage")
-    highlighting = false
-  }
-  checkScoverage {
-    minimumRate = 0.0
-  }
-  checkScoverage.shouldRunAfter('test')
 
   configurations {
     // manually excludes some unnecessary dependencies
